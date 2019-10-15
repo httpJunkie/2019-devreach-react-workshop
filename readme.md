@@ -289,3 +289,159 @@ git push -u origin master
 We created our own [Webpack](https://webpack.js.org/), [Babel](https://babeljs.io/) & [React]([https://reactjs.org](https://reactjs.org/)) build ourselves, without using something like Create React App ([CRA](https://github.com/facebook/create-react-app)) to and because of this we are smarter about our application and have a better understanding of how a minimal React application works under the hood and how to build and run that application from a basic standpoint.
 
 We will tackle linting in the next section.
+
+## Getting Started with ESLint
+
+Article on ESLint: [Getting Started](https://eslint.org/docs/user-guide/getting-started)
+
+We need to install and initialize ESLint.
+
+```bash
+npm i --save-dev eslint babel-eslint eslint-watch eslint-plugin-react
+```
+
+## Add Linting for ES6, JSX and React Hooks
+
+Create our ESLint configuration file in the root directory of our project:
+
+#### `.eslintrc` (ESLint Config)
+
+```json
+{
+  "plugins": [
+    "react"
+  ],
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "env": {
+    "es6": true,
+    "browser": true,
+    "node": true
+  },
+  "extends": [],
+  "rules": {
+    "semi": ["error", "always"],
+    "quotes": ["error", "double"]
+  },
+  "settings": {
+    "react": {
+      "version": "16.9"
+    }
+  }
+}
+```
+
+Before we can run our linter, let's add a `lint` and `lint:fix` script to our `package.json` just above the test script:
+
+```json
+    "lint": "eslint app --ext .js,.jsx",
+    "lint:fix": "eslint --fix app --ext .js,.jsx",
+```
+
+Again, they are made to work specifically with React hence the `.js` and `.jsx` file extensions. Now let's run our linter.
+
+```bash
+npm run lint
+```
+
+Right away we get some errors:
+
+```bash
+✖ 6 problems (6 errors, 0 warnings)
+  6 errors and 0 warnings potentially fixable with the `--fix` option.
+```
+
+This is great, it means our linter is working. But as a team, let's assume that we do not want to follow the double quote rule and we only want to follow the semi-colon rule. Let's make the following changes to the `.eslintrc` file:
+
+```json
+    "semi": ["warn", "always"],
+    "quotes": ["off", "double"]
+```
+
+At this point we should not get any errors.  We can turn off the quotes as shown above, or completely remove it. If you would like to test the linter one more time, try removing some semi-colons and running it again.
+
+### Adding linting for React Hooks
+
+Some rules that we may want to apply are not built into ESLint because they are framework specific and we are working in React. If we want to apply the suggested rules for using Hooks in React, we need to add a new package that can be used as a plugin, we already have one plugin added and set up for JSX, but let's show how to add another one.
+
+Let's install the package we need:
+
+```bash
+npm i --save-dev eslint-plugin-react-hooks
+```
+
+First we will add `react-hooks` to the plugin section the `.eslintrc` file:
+
+```json
+    "react",
+    "react-hooks"
+```
+
+then, we will add the rule to the rules section the `.eslintrc` file:
+
+```json
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "semi": ["warn", "always"],
+    "quotes": ["off", "double"]
+```
+
+To check the plugin is working, replace the first line in `App.js` with:
+
+```jsx
+import React, { useEffect } from 'react';
+useEffect(() => {
+  console.log("This should trigger our Hooks rule");
+});
+```
+
+Run our linter again and you should get a warning, appended to the end is the rule responsible for this error `react-hooks/rules-of-hooks`:
+
+```bash
+C:\dev\workshops\2019-devreach-react-workshop\app\App.js
+  2:1  error  React Hook "useEffect" cannot be called at the top level. React Hooks must be called in a React function component or a custom React Hook function  react-hooks/rules-of-hooks
+```
+
+Discard our changes in `App.js` Our Hooks linting is working.
+
+Let's use a rule that will work with our `react` plugin!
+In the [JSX-specific-rules section of their documentation]((https://github.com/yannickcr/eslint-plugin-react#jsx-specific-rules)) we can see a rule for no duplicate props.
+
+Add the following to the `.eslintrc` file's rule's section:
+
+```json
+    "react/jsx-no-duplicate-props": "error",
+```
+
+We could then go into our `index.js` file and add duplicate props:
+
+```jsx
+ReactDOM.render(<App isTrue={true} isTrue={false} />, document.getElementById("root"));
+```
+
+And we get the following error:
+
+```bash
+C:\dev\workshops\2019-devreach-react-workshop\app\index.js
+  6:36  error  No duplicate props allowed  react/jsx-no-duplicate-props
+```
+
+Again, the rule that triggered this error is listed at the end of the error.
+
+This next change will probably have no effect, but let's update the React version in our `.eslintrc` file, ensure that it matches the version of React you have installed:
+
+```json
+ "settings": {
+    "react": {
+      "version": "16.10"
+    }
+  }
+```
+
+Great, linting is working and I can leave exploring new rules up to you! This concludes the linting section of the workshop. Next up is some prep work needed to create a responsive frame for our application.
