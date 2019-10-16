@@ -1,6 +1,8 @@
 import React from 'react';
 import './Topnav.scss';
+
 import Menu from './Menu';
+
 const Topnav = () => {
   return (
     <div className={`topnav`}>
@@ -8,4 +10,5 @@ const Topnav = () => {
     </div>
   )
 }
+
 export default Topnav;
