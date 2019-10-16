@@ -1554,3 +1554,140 @@ If you have not stopped your project, you will need to now and run `npm start` a
 ![](https://imgur.com/JgUqGCe.gif)
 
 This concludes our section on creating a theme and making it toggle from light to dark on the fly. 
+
+## Add a Launch Component With Data from SpaceX API
+
+SpaceX API: [r/SpaceX API Docs](https://docs.spacexdata.com/?version=latest)
+
+As you noticed we have a SpaceX theme and we are going to use the SpaceX public API to build some stuff. My idea for the home page is to show the next SpaceX launch, luckily they have a route specifically for this. I'd like to simply render a component on the page that I can pass an individual `flight_number={7}` to and get any of the SpaceX Launches or to be able to pass a prop like `next={true}`.
+
+```jsx
+<Launch flight={74} />
+```
+
+or
+
+```jsx
+<Launch next={true} />
+```
+
+To get started we will need a `Launch` partial component and we should keep it in a seperate folder from the site related partials. Before we create this new component, we need to install `prop-types` in order to specify the props coming into our components.
+
+```bash
+npm i prop-types
+```
+
+Create a new directory inside `paritial-components` called `space-x` and inside of it we will create a `Launch.js` file:
+
+```jsx
+import React, { useState, useEffect} from 'react';
+
+const getSpaceXLaunchNext = () => {
+  return fetch(`https://api.spacexdata.com/v3/launches/next`)
+    .then((res) => res.json())
+};
+
+const Launch = () => {
+  const [launch, setLaunch] = useState(null);
+  
+  useEffect(() => {
+    getSpaceXLaunchNext()
+      .then(setLaunch)
+  }, [])
+  
+  if (launch === null) {
+    return <p>Loading launch...</p>
+  }
+
+  return (
+    <div className="view-checklist">
+      <h2 className={`launch-name`}>{launch.mission_name}</h2>
+      <p><strong>Flight Number</strong> {launch.flight_number}</p>
+      <p><strong>Launch Site</strong> {launch.launch_site.site_name_long}</p>
+    </div>
+  )
+}
+
+export default Launch;
+```
+
+Let's ad this component to the `Home.js` page by first adding an import:
+
+```js
+import Launch from '../partial-components/space-x/Launch';
+```
+
+And then adding the comopnent to the JSX:
+
+```js
+  return (
+    <div className="view-home">
+      <h3>Next Launch</h3>
+      <Launch />
+    </div>
+  )
+```
+
+We have the basics working and we are fetching the next launch, but as we said above, we want to also have the abilityu to pass a `flight` prop with an specific flight and have it show.
+
+First let's set some types for our two props that we want to use, import the following into `Launch.js`:
+
+```js
+import PropTypes from 'prop-types';
+```
+
+Add `props` to the component by updating to the following and use and talk about destructuring:
+
+```js
+const Launch = ({next, flight}) => {
+  const getNext = next || (!next && !flight);
+```
+
+And propTypes to the end of the file:
+
+```js
+export default Launch;
+
+Launch.propTypes = {
+  flight: PropTypes.number,
+  next: PropTypes.bool
+};
+```
+
+Now we can add either prop that we discussed to and pass data in via the `Home.js` container component.
+
+We are going to add an alternate fetch function called `getSpaceXLaunch` which will receive the `flight` prop:
+
+```js
+const getSpaceXLaunch = (flight) => {
+  return fetch(`https://api.spacexdata.com/v3/launches/${flight}`)
+    .then((res) => res.json())
+};
+```
+
+And we need to update our `useEffect()` hook to:
+
+```js
+  useEffect(() => {
+    if (next) {
+      getSpaceXLaunchNext()
+        .then(setLaunch)
+    } else {
+      getSpaceXLaunch(flight)
+        .then(setLaunch)
+    }
+  }, [flight, next])
+```
+
+Although we don't have to change our component on the `Home.js` page, let's be very explicit and do so:
+
+```js
+  return (
+    <div className="view-home">
+      <h3>Next Launch</h3>
+      <Launch next={true} />
+    </div>
+  )
+```
+
+We will go over what's going on here as part of the workshop, this concludes the section on adding a Launch Component with SpaceX API data.

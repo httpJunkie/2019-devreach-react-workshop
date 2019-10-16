@@ -45,6 +45,7 @@
     "@progress/kendo-react-intl": "^3.5.0",
     "@progress/kendo-theme-material": "^3.3.3",
     "normalize.css": "^8.0.1",
+    "prop-types": "^15.7.2",
     "react": "^16.10.2",
     "react-dom": "^16.10.2",
     "react-media-hook": "^0.4.4",
