@@ -1690,4 +1690,470 @@ Although we don't have to change our component on the `Home.js` page, let's be v
   )
 ```
 
-We will go over what's going on here as part of the workshop, this concludes the section on adding a Launch Component with SpaceX API data.
+We will go over what's going on here during the workshop, this concludes the section on adding a Launch Component with SpaceX API data.
+
+## Implement SpaceX Events as Master and Detail Page
+
+One of the things everyone needs to be able to do in a web application is have a predictable url scheme to access your various pages and their details. In the traditional web application we would post back to the server and or reload the browser to go from a list of something to a more detailed version of it. But we have more capabilities in a React application, so lets split up the page with a list on the left and detail on the right that once a selection is made populates the details section. Instantaeously and preferable without making more than one request to the API, we get all of the events. The same data used when getting the event titles, can be used for our details page.
+
+When the Events page loads the following things should happen:
+
+- Request data from the SpaceX History endpoint
+- Populate the left side of the page with a list using that data
+- The component on the right is aware that the URL lacks an `event_id`
+- The right hand component displays a message: .. select and event!
+- The Event page itself is like a container for the left and right side cmponents
+- If we have an `event_id` as part of the url: `/event/6`
+- We need to match that to an event by id
+- Then pass it to the right hand component (dumb component)
+- Props change when user clicks an event and an updat the right hand component happens
+- If the url is loaded cold everything should still work
+
+### Add the Files For Events
+
+We will add all of our files in the `space-x` directory, create the following files:
+
+- `EventList.js` <!-- Partial  -->
+- `EventList.scss` <!-- Style  -->
+- `EventDetails.js` <!-- Partial  -->
+- `EventDetails.scss` <!-- Style  -->
+- `events-data.js` <!-- Hook  -->
+
+### From The Left to The Right
+
+We will start by simply getting the `EventList` and `EventDetails` pages to load side by side by using an npm package that will give us components for laying out pages using flexbox.
+
+Install `simple-flexbox`:
+
+```bash
+npm i simple-flexbox
+```
+
+Let's add this to the `Events` page as well as import our components we will need.
+
+```js
+import { Column, Row } from "simple-flexbox";
+import EventList from '../partial-components/space-x/EventList';
+import EventDetails from '../partial-components/space-x/EventDetails';
+```
+
+We can talk through the following code that will replace all of the JSX and split the page 50/50. :
+
+```jsx
+    <Row horizontal="spaced">
+      <Column flexGrow={1} style={{width:'45%', padding: 5}}>
+        <EventList eventData={[{title: "Item One", url: "#"}, {title: "Item Two", url: "#"}]} />
+      </Column>
+      <Column flexGrow={1} style={{width:'55%', padding: 5}}>
+        <EventDetails eventData={{title: "Awesome Launch"}} />
+      </Column>
+    </Row>
+```
+
+### Adding the EventList and EventDetails Components
+
+First we will add code to get each page displaying something:
+
+#### `EventList.js`
+
+```jsx
+import React, { useState} from 'react';
+import PropTypes from 'prop-types';
+import './EventList.scss';
+const EventList = (props) => {
+  const listItems = props.eventData.map(event => {
+    return <li className="event-post" key={event.id + event.title}>
+      <Link className='link' to={`/events/${event.id}`}>{event.title}</Link>
+    </li>
+  });
+  return (
+    <div className={`view-events`}>
+      <h3>Historical Events</h3>
+      <ul className="event-list">
+        {listItems}
+      </ul>
+    </div>
+  );
+}
+export default EventList;
+EventList.propTypes = {
+  eventData: PropTypes.array
+};
+
+```
+
+#### `EventList.scss`
+
+```scss
+ul.event-list {
+  padding: 0;
+  > li {
+    list-style: none;
+    line-height: 2em;
+    font-size: 17px;
+  }
+}
+
+ul.event-list > li {
+  list-style: none;
+  line-height: 2em;
+  font-size: 17px;
+}
+```
+
+#### `EventDetails.js`
+
+```jsx
+import React from "react";
+import PropTypes from 'prop-types';
+import './EventDetails.scss';
+const EventDetails = (props) => {
+  const event = props.eventData;
+  return (event
+    ? <>
+      <h3>{event.title}</h3>
+    </>
+    : <h3>.. select and event!</h3>
+  );
+};
+export default EventDetails;
+EventDetails.propTypes = {
+  eventData: PropTypes.object
+};
+```
+
+#### `EventDetails.scss`
+
+```scss
+.flight-number {
+  font-size: 2.5em;
+}
+.flight-number.none {
+  text-decoration: line-through;
+}
+.event-details {
+  font-size: 18px;
+}
+ul.event-links {
+  padding: 0;
+  > li {
+    padding-left: 1em;
+    list-style: none;
+    line-height: 1.75em;
+    font-size: 16px;
+    border-left: 4px solid #999;
+  }
+}
+```
+
+Let's run our project and make sure everything is working:
+
+```bash
+npm start
+```
+
+We now have enough to get started with fetching the data and each component is already receiving props even though we are feeding it some fake data. Let's now fetch all of the data and try to get the master detail working with the routing params.
+
+### Fetching the SpaceX History Data on the Events Page
+
+We are going to be fetching the data on the Events page and giving each of our components soem data to work with. Let's make the calls and fetch the data on the `Events.js` page:
+
+Replace:
+
+```js
+const Events = () => {
+  useEffect(() => {document.title = `SpaceX Historical Events`});
+```
+
+With: 
+
+```js
+const Events = ({match}) => {
+  const event_id = match.params.event_id;
+  const [events, setEvents] = useState([]);
+  const [isloading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetch(`https://api.spacexdata.com/v3/history`)
+      .then(res => {
+        if(res.ok) {
+          return res.json();
+        } else {
+          throw Error("Fetching Events");
+        }
+      })
+      .then(events => {
+        setEvents(events);
+        setIsLoading(false);
+      })
+      .catch(error => setError(error))
+  },[])
+
+  useEffect(() => {
+    document.title = `SpaceX Historical Events`;
+  });
+
+  if (!events && isLoading) {
+    return <p>Loading Events Posts...</p>;
+  } else if (error) {
+    return <p>{error.message}</p>;
+  }
+
+  const event = events.find(event => {
+    return event.id === Number(event_id);
+  });
+```
+
+Add `useEffect` import`:
+
+```js
+import React, { useEffect } from 'react';
+```
+
+OK, let's talk about what is happening here, we are checking for a URL param, fetching data and if we do have a URL param it's for `event_id` and we are going to single out a specific event and get that ready to pass to the `EventDetails` component.
+
+With this in place we can pass the two variables `events` and `event` to each respective component:
+
+```jsx
+    <Row horizontal="spaced">
+      <Column flexGrow={1} style={{width:'45%', padding: 5}}>
+        <EventList eventData={events}/>
+      </Column>
+      <Column flexGrow={1} style={{width:'55%', padding: 5}}>
+        <EventDetails eventData={event} />
+      </Column>
+    </Row>
+```
+
+We also need to update our Router in the `Frame.js` page:
+
+```jsx
+<Route exact path={["/events/:event_id", "/events/"]} component={Events} />
+```
+
+If we look at our app, we should now have our `title` populating on the right hand side when we click on the link from the left.
+
+### Extracting our Data Related State and Effects
+
+Now that we are fetching data and doing the basic mapping and filtering passing it to the components, we would like to add some more features and information dispalyed as part of the master and detail page.
+
+Let's take all of the `events`, `isLoading`, `error` and the `useEffect()` that fetches our data and create our own hook and in turn extracting this logic out to the `events-data.js` file that we created:
+
+Let's first add a function to the `events-data.js` page:
+
+```js
+import { useEffect, useState } from 'react';
+
+export function useEventData() {
+
+  /* code from Events.js goes here! */
+
+  return { events, isloading, error };
+}
+```
+
+Next, extract the following code from `Events.js`:
+
+```js
+  const [events, setEvents] = useState([]);
+  const [isloading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetch(`https://api.spacexdata.com/v3/history`)
+      .then(res => {
+        if(res.ok) {
+          return res.json();
+        } else {
+          throw Error("Fetching Events");
+        }
+      })
+      .then(events => {
+        setEvents(events);
+        setIsLoading(false);
+      })
+      .catch(error => setError(error))
+  },[])
+```
+
+We can now go back to the `Events.js` page and import the new hook we just made:
+
+```js
+import { useEventData } from '../partial-components/space-x/events-data';
+```
+
+And just above the `useEffect()` tht still remains on the `Events` page, add the following:
+
+```js
+const { events, isLoading, error } = useEventData();
+```
+
+Let's briefly talk about what we did here. We made the page more readable and extracted all of that logic that dealt with obtaining and exposing the data through state into one hook that we simply use in our `Events.js` page now.
+
+### Adding More Information to the EventDetails Page 
+
+Let's just update the entire return statement on the `EventDetails,s` page with the following:
+
+```jsx
+  return (event
+    ? <>
+      <h3>{event.title}</h3>
+      <div className={`flight-number ${!event.flight_number && 'none'}`}>
+        {event.flight_number 
+          ? <>Flight Number: {event.flight_number}</>
+          : <>No Flight Number</>
+        }
+      </div>
+      <p className={`event-details`}>{event.details}</p>
+      <ul className={`event-links`}>
+        <li>
+          <a className={`link`} href={event.links.article}>SpaceX Article</a>
+        </li>
+        <li>
+          <a className={`link`} href={event.links.wikipedia}>Wiki Article</a>
+        </li>
+      </ul>
+    </>
+    : <h3>.. select and event!</h3>
+  );
+```
+
+That helps to fill out the page and we even have a class that is being conditionally rendered based on a flight number being available (or not) and our styled links, borders and font sizes that we pasted in as part of the styles for these pages should be working too!
+
+### Installing a Pager Component from KendoReact
+
+KendoReact Pager documentation: [Pager Overview](https://www.telerik.com/kendo-react-ui/components/datatools/pager/)
+
+In order to present this page a little better and to learn how we can easily page data in a React application with the help of KendoReact, lets add an npm package:
+
+```bash
+npm i @progress/kendo-react-data-tools @progress/kendo-react-intl
+```
+
+Let's bring in the component just before the `EventList.scss` import:
+
+```js
+import { Pager } from "@progress/kendo-react-data-tools";
+```
+
+Inside the `EventLists.js` page and above the declaration of the `cosnt listItems`, let's create some space and add the following properties:
+
+```js
+  const total = props.eventData.length;
+  const [pageState, setPageState] = useState({ skip: 0,take: 10 });
+  const { skip, take, ...rest } = pageState;
+```
+
+Just below that we will need a handler for the `Pager` component's `onChange()` event:
+
+```js
+  const handlePageChange = event => {
+    const { skip, take } = event;
+    setPageState({ ...pageState, skip: skip, take: take });
+  };
+```
+
+We also need to slightly update `listItems` which uses a sliced version of itself:
+
+```js
+  const subEvents = props.eventData.slice(skip, (skip+take))
+  const listItems = subEvents.map(event => {
+    return <li className="event-post" key={event.id + event.title}>
+      <Link className='link' to={`/events/${event.id}`}>{event.title}</Link>
+    </li>
+  })
+```
+
+Finally at the bottom of render function, add the `Pager` component:
+
+```js
+  return (
+    <div className={`view-events`}>
+      <h3>Historical Events</h3>
+      <ul className="event-list">
+        {listItems}
+      </ul>
+      <Pager skip={skip} take={take} total={total}
+        buttonCount={2} type={`numeric`} onPageChange={handlePageChange} />
+    </div>
+  )
+```
+
+This should give us two pages of links we can swap between, and it works directly with our exisitng list of Events!
+
+Your page should now look similar to this:
+
+![site preview](https://imgur.com/qKPSrCy.gif)
+
+## Bug Fixes
+
+I have one more set of changes I would like to record here at the end. Our link styles are bleeding into our KendoReact components, I set up the `classNames` and some of the CSS erroniously, we need to make an adjustment to the `App.scss` page:
+
+```scss
+a.text_link {
+  color: inherit;
+  text-decoration: none;
+  margin-bottom: 0.25em;
+}
+a.text_link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0% 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 4px;
+  background-position-y: 1.1em;
+  transition: background-size cubic-bezier(0, 0.5, 0, 1) 0.3s;
+}
+a.text_link:hover,
+a.text_link:visited:hover,
+a.text_link:active:hover {
+  text-decoration: none;
+  background-size: 100% 4px;
+}
+a.text_link:focus,
+a.text_link:visited {
+  text-decoration: none;
+  background-size: 0% 4px;
+}
+```
+
+We need to now update the `EventList.js` link:
+
+```js
+<Link className='text_link' to={`/events/${event.id}`}>{event.title}</Link>
+```
+
+We need to now update the `EventDetails.js` links:
+
+```js
+      <ul className={`event-links`}>
+        <li>
+          <a className={`text_link`} href={event.links.article}>SpaceX Article</a>
+        </li>
+        <li>
+          <a className={`text_link`} href={event.links.wikipedia}>Wiki Article</a>
+        </li>
+      </ul>
+```
+
+And the `Menu.js` page we need to replace last three list items:
+
+```js
+      <li className="link">
+        <NavLink className="text_link" tabIndex="2" exact activeClassName="active" to="/">Home</NavLink>
+      </li>
+      <li className="link">
+        <NavLink className="text_link" tabIndex="3" activeClassName="active" to="/events">Events</NavLink>
+      </li>
+      <li className="link">
+        <a className="text_link" tabIndex="4" href="https://github.com/httpJunkie/2019-devreach-react-workshop">
+          Source Code <i className="k-icon k-i-hyperlink-open-sm"></i>
+        </a>
+      </li>
+```
+
+This should namespace our links and keep them from bleeding into the KendoReact Pager's buttons (showing a line through them) We can talk about why this happened!
+
+That concludes the section dealing with taking the Event master details page to the next level!
