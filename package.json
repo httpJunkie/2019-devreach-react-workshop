@@ -30,7 +30,7 @@
     "eslint-plugin-react-hooks": "^2.1.2",
     "eslint-watch": "^6.0.1",
     "file-loader": "^4.2.0",
-    "html-webpack-plugin": "^3.2.0",
+    "html-webpack-plugin": "^5.5.0",
     "node-sass": "^7.0.0",
     "sass-loader": "^8.0.0",
     "style-loader": "^1.0.0",
@@ -51,6 +51,6 @@
     "react-dom": "^16.10.2",
     "react-media-hook": "^0.4.4",
     "react-router-dom": "^5.1.2",
-    "simple-flexbox": "^2.3.0"
+    "simple-flexbox": "^2.3.3"
   }
 }
